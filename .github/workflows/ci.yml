@@ -1,0 +1,43 @@
+name: CI/CD Pipeline
+
+# 触发条件：推送或 PR 到 outstanding_projects 分支时执行
+on:
+    push:
+        branches: [outstanding_projects]
+    pull_request:
+        branches: [outstanding_projects]
+
+jobs:
+    build-and-test:
+        runs-on: ubuntu-latest # 使用最新版 Ubuntu 作为运行环境
+
+        steps:
+            # 拉取仓库代码到 runner 机器
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            # 安装指定版本的 Node.js 运行环境
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: "20"
+
+            # 进入 backend 目录，安装项目所需的 npm 依赖
+            - name: Install Backend Dependencies
+              run: |
+                  cd backend
+                  npm install
+
+            # 运行 ESLint 代码风格检查，确保代码规范
+            - name: Lint Backend
+              run: |
+                  cd backend
+                  npm run lint
+
+            # 编译 TypeScript 源码，生成可部署的 dist 产物
+            - name: Build Backend
+              run: |
+                  cd backend
+                  npm run build
+
+        # 这里可以扩展：如构建 Docker 镜像并推送到阿里云镜像仓库 (ACR)
