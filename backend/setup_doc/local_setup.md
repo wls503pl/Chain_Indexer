@@ -111,7 +111,7 @@ volumes:
 完成後執行以下命令啟動服務：
 
 ```bash
-docker compose up -d
+sudo docker-compose up -d
 ```
 
 ---
