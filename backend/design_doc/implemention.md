@@ -68,7 +68,7 @@ npm run start:dev
 
 **WebSocket 檢測到新交易的實時日誌**：
 
-![WebSocket 檢測到 SWAVE 新交易](./img/listening/newSol_transaction.png)
+![WebSocket 檢測到 SWAVE 新交易](../img/listening/newSol_transaction.png)
 
 控制台輸出示例：
 ```text
@@ -98,7 +98,7 @@ sudo docker-compose exec kafka kafka-console-consumer --bootstrap-server 127.0.0
 
 **Kafka 接收到交易數據的實時輸出**：
 
-![Kafka 消費交易數據](./img/listening/kafka_received.png)
+![Kafka 消費交易數據](../img/listening/kafka_received.png)
 
 Kafka 消費輸出示例（JSON 格式）：
 ```json
@@ -130,16 +130,33 @@ Kafka 消費輸出示例（JSON 格式）：
 執行以下命令進入數據庫查看已索引的交易：
 
 ```bash
-docker exec -it chain_indexer_db psql -U postgres -d chain_indexer -c "SELECT signature, slot FROM transaction LIMIT 5;"
+sudo docker exec -it chain_indexer_db psql -U postgres -d chain_indexer -c "SELECT signature, slot FROM transaction WHERE signature NOT LIKE 'TEST_SIG_%' LIMIT 5;"
 ```
 
-**預期結果**：
+**數據庫查詢結果驗證**：
+
+![PostgreSQL 中已持久化的交易數據](../img/listening/data_inPostgreSQL.png)
+
+查詢輸出示例（2 筆交易記錄）：
 ```
-                                                   signature                                                   |    slot    
-─────────────────────────────────────────────────────────────────────────────────────────────────────────────┬──────────
- 436gKi9teUdAUSZURnMwcF5Y66E4Q9fxNda5UcceZwRUuYevyKxrrYNTarNB6nhPeQEdx9pQLUpvtuFqid2DTz5m              | 452936071
- (1 row)
+                                                   signature                                                   |     slot    
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────┬──────────────
+ 41S5pPYD3cxM5kSiADc796ko48WFGADmXMoV84k1n7ri7uosjBNva1zD9uMpcbR11u1b9zRLyhy4vKmHQQwkiF1              | 452990585
+ 5KcbmwzxLdWXhyfrUe25jN1XKNQ9jsBePdfM77K9dqLrybGQumLEM5gtun3sXwbJoLkT4j8d9eUBcnAzENL2BstJ            | 452991837
+ (2 rows)
 ```
+
+### 3.4 最近交易數據查詢驗證
+
+執行以下命令查看最近索引的交易詳細信息：
+
+```bash
+sudo docker exec -it chain_indexer_db psql -U postgres -d chain_indexer -c "SELECT signature, slot, block_time, transaction_type FROM transaction ORDER BY created_at DESC LIMIT 2;"
+```
+
+**最近交易詳細數據**：
+
+![最近 2 筆交易的詳細信息](../img/listening/recent2_transaction.png)
 
 ### 3.4 核心技術亮點
 
@@ -234,13 +251,13 @@ sudo docker-compose restart chain_indexer_db
 
 ## 六、 部署檢查清單
 
-- [ ] Docker Desktop 已安裝並運行
-- [ ] `docker-compose ps` 顯示所有容器 `Up`
-- [ ] `npm run start:dev` 啟動無誤
-- [ ] WebSocket 連接日誌顯示 `訂閱確認成功`
-- [ ] 在 Phantom 發送一筆 SWAVE 轉賬交易
-- [ ] Kafka 消費者顯示收到新交易
-- [ ] 數據庫查詢返回交易記錄
+- [x] Docker Desktop 已安裝並運行
+- [x] `docker-compose ps` 顯示所有容器 `Up`
+- [x] `npm run start:dev` 啟動無誤
+- [x] WebSocket 連接日誌顯示 `訂閱確認成功`
+- [x] 在 Phantom 發送 SWAVE 轉賬交易
+- [x] Kafka 消費者顯示收到新交易
+- [x] 數據庫查詢返回交易記錄
 
 ---
 
