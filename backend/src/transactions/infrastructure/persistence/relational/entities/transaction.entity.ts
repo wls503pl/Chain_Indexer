@@ -4,7 +4,7 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  Index, // 1. 導入 Index
+  Index,
 } from 'typeorm';
 import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
 import { ApiProperty } from '@nestjs/swagger';
@@ -22,9 +22,13 @@ export class TransactionEntity extends EntityRelationalHelper {
   slot: string;
 
   @ApiProperty()
-  @Index({ unique: true }) // 2. 關鍵：為 signature 增加唯一索引，確保數據庫層面的冪等性
+  @Index({ unique: true })
   @Column()
   signature: string;
+
+  @ApiProperty()
+  @Column({ type: 'varchar', length: 20, default: 'solana' })
+  chain: string; // 'solana' | 'ethereum' — 標識交易來源鏈
 
   @ApiProperty()
   @Column({ type: 'boolean', default: false })

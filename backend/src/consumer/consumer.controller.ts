@@ -11,11 +11,12 @@ import { Account, BlockMeta, Transaction, Slot } from './domain/types';
  * 而是通过 @EventPattern 监听 Kafka Topic，
  * 收到消息后直接转发给 ConsumerService 做业务处理和数据库写入。
  *
- * 这里监听的四个 Topic 对应 Yellowstone gRPC 推送的四类链上事件：
- *   - slot_status       : slot 状态变更（已处理 / 已确认 / 已最终确认）
- *   - block_metadata    : 区块元信息
- *   - account_updates   : 账户状态变更
- *   - transaction       : 交易数据
+ * 这里监听的五个 Topic：
+ *   - solana.testnet.slot_status       : slot 状态变更
+ *   - solana.testnet.block_metadata    : 区块元信息
+ *   - solana.testnet.account_updates   : 账户状态变更
+ *   - solana.testnet.transaction       : Solana 交易数据
+ *   - eth.mainnet.uniswap.swap         : Ethereum Uniswap V3 Swap 事件
  */
 @Controller({ path: 'consumer', version: '1' })
 export class ConsumerController {
@@ -25,13 +26,6 @@ export class ConsumerController {
   /**
    * 监听 Kafka Topic: solana.testnet.slot_status
    * 收到 slot 状态更新消息后，将其中的 Slot 对象持久化到数据库。
-   *
-   * Solana 的 slot 有三个确认阶段：
-   *   processed（已处理）→ confirmed（已确认）→ finalized（已最终确认）
-   * 索引器通常只存 finalized 状态，避免因 reorg 导致数据回滚。
-   *
-   * message 结构示例：
-   * { update_oneof: { Slot: { slot: 123n, parent: 122n, status: 'finalized' } } }
    */
   @EventPattern('solana.testnet.slot_status')
   slotStatus(@Body() message: { update_oneof: { Slot: Slot } }) {
@@ -41,12 +35,6 @@ export class ConsumerController {
   /**
    * 监听 Kafka Topic: solana.testnet.block_metadata
    * 收到区块元信息消息后，将 BlockMeta 持久化到数据库。
-   *
-   * BlockMeta 包含区块哈希、时间戳、父块信息、交易数量等，
-   * 是后续查询区块详情的基础索引数据。
-   *
-   * message 结构示例：
-   * { update_oneof: { BlockMeta: { slot: 123n, blockhash: '...', ... } } }
    */
   @EventPattern('solana.testnet.block_metadata')
   blockMetadata(@Body() message: { update_oneof: { BlockMeta: BlockMeta } }) {
@@ -56,14 +44,6 @@ export class ConsumerController {
   /**
    * 监听 Kafka Topic: solana.testnet.account_updates
    * 收到账户状态变更消息后，将账户数据和所在 slot 持久化到数据库。
-   *
-   * 注意 message 的嵌套结构：Account 字段下同时携带了
-   *   - account : 账户完整状态（公钥、余额、数据等）
-   *   - slot    : 触发此次变更的 slot 编号
-   * Service 层需要两个参数分开处理，所以这里解构后分别传入。
-   *
-   * message 结构示例：
-   * { update_oneof: { Account: { account: { pubkey: '...', lamports: 100 }, slot: 123 } } }
    */
   @EventPattern('solana.testnet.account_updates')
   accountUpdates(
@@ -73,21 +53,14 @@ export class ConsumerController {
     },
   ) {
     return this.consumerService.saveAccount(
-      message.update_oneof.Account.account, // 账户状态对象
-      message.update_oneof.Account.slot, // 触发变更的 slot
+      message.update_oneof.Account.account,
+      message.update_oneof.Account.slot,
     );
   }
 
   /**
    * 监听 Kafka Topic: solana.testnet.transaction
    * 收到交易消息后，将交易数据和所在 slot 持久化到数据库。
-   *
-   * 同 accountUpdates，Transaction 字段下也同时携带了
-   *   - transaction : 完整交易对象（签名、指令、执行结果 meta 等）
-   *   - slot        : 该交易所在的 slot（bigint，Solana slot 编号较大需用 bigint）
-   *
-   * message 结构示例：
-   * { update_oneof: { Transaction: { slot: 123n, transaction: { signature: '...', ... } } } }
    */
   @EventPattern('solana.testnet.transaction')
   transaction(
@@ -97,8 +70,34 @@ export class ConsumerController {
     },
   ) {
     return this.consumerService.saveTransaction(
-      message.update_oneof.Transaction.transaction, // 完整交易对象
-      message.update_oneof.Transaction.slot, // 交易所在 slot
+      message.update_oneof.Transaction.transaction,
+      message.update_oneof.Transaction.slot,
     );
+  }
+
+  /**
+   * 监听 Kafka Topic: eth.mainnet.uniswap.swap
+   * 收到 Ethereum Uniswap V3 Swap 事件后，将其持久化到数据库。
+   *
+   * 数据由 EthListenerService 通过 Alchemy WebSocket 捕获后发送到 Kafka，
+   * 这里消费并转发给 ConsumerService.saveEthSwap() 写入 PostgreSQL。
+   *
+   * message 结构示例：
+   * {
+   *   chain: 'ethereum',
+   *   network: 'mainnet',
+   *   protocol: 'uniswap_v3',
+   *   event_type: 'swap',
+   *   transaction_hash: '0x...',
+   *   block_number: 12345678,
+   *   pool_address: '0x...',
+   *   swap_data: { sender, recipient, amount0, amount1, sqrtPriceX96, liquidity, tick },
+   *   log_index: 0,
+   *   timestamp: 1234567890
+   * }
+   */
+  @EventPattern('eth.mainnet.uniswap.swap')
+  ethUniswapSwap(@Body() message: any) {
+    return this.consumerService.saveEthSwap(message);
   }
 }

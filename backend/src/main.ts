@@ -13,7 +13,7 @@ async function bootstrap() {
         brokers: [process.env.KAFKA_BROKER || 'localhost:9092'],
       },
       consumer: {
-        groupId: 'solana-indexer-consumer', // 固定一個 ID
+        groupId: 'solana-indexer-consumer',
       },
     },
   });

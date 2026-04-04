@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { SolanaListenerService } from './solana-listener.service';
+import { EthListenerService } from './eth-listener.service';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { SolanaListenerService } from './solana-listener.service';
       },
     ]),
   ],
-  providers: [SolanaListenerService],
-  exports: [SolanaListenerService],
+  providers: [SolanaListenerService, EthListenerService],
+  exports: [SolanaListenerService, EthListenerService],
 })
 export class ListenerModule {}
