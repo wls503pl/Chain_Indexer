@@ -106,6 +106,50 @@ When the system moves to production and data volume reaches hundreds of millions
 
 ---
 
+## 🎬 Live Demo
+
+The following screenshots capture the system running against **real mainnet / devnet data** — not mocks.
+
+### 1. System Startup — Dual-Chain Listeners Online
+
+Both `SolanaListenerService` (Helius Devnet WebSocket) and `EthListenerService` (Alchemy Mainnet WebSocket) connect successfully on boot. The NestJS microservice registers the Kafka consumer, and the indexer begins capturing live events within milliseconds.
+
+![Indexer Running](img/indexer_running.png)
+
+---
+
+### 2. Ethereum — Real Uniswap V3 Swap Events in Kafka
+
+Raw Kafka topic dump (`eth.mainnet.uniswap.swap`) showing decoded Uniswap V3 USDC/WETH swap payloads captured from Ethereum Mainnet in real time — including `sender`, `recipient`, `amount0`, `amount1`, `sqrtPriceX96`, `liquidity`, `tick`, and `log_index`.
+
+![Kafka Real Transactions](img/kafka_get_real_tx.png)
+
+---
+
+### 3. PostgreSQL — Recent Transactions Query
+
+Live SQL query against the `transaction` table showing the 10 most recent records indexed from Ethereum Mainnet. Each row carries `chain`, `slot` (block number), full `signature` (tx hash), and `createdAt` timestamp — confirming end-to-end pipeline integrity.
+
+![Recent Transactions in PostgreSQL](img/recent_tx_of_uniswapV3.png)
+
+---
+
+### 4. Cross-Verification — Etherscan (Ethereum)
+
+The transaction hash captured by the indexer (`0x2b251918e8ba4ae07260031264f0ca71cd74ffb17e6fbac72143fd90ef4ffae4`) verified directly on Etherscan. Block `25054915`, timestamp `May-09-2026 03:45:11 AM UTC` — an exact match with what PostgreSQL recorded at `2026-05-09 03:45:13`.
+
+![Verify on Etherscan](img/verify_on_etherscan.png)
+
+---
+
+### 5. Cross-Verification — Solscan (Solana)
+
+A SWAVE token transfer captured on Solana Devnet via Helius WebSocket, verified on Solscan. The token (`Ekp5zf...gwgStJ`) and transaction signature match exactly what the indexer subscribed to and persisted.
+
+![Verify on Solscan](img/verify_on_solscan.png)
+
+---
+
 ## Tech Stack
 
 | Layer | Technology | Rationale |
